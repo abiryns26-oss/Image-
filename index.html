@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Image Stamp - Read Only</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 28px 22px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.6rem;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #a0aec0;
+            font-size: 0.95rem;
+            margin-bottom: 28px;
+        }
+
+        .upload-area {
+            border: 2px dashed #4a5568;
+            border-radius: 18px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 24px;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #63b3ed;
+            background: rgba(99, 179, 237, 0.1);
+        }
+
+        .upload-area.has-image {
+            padding: 12px;
+            border-style: solid;
+            border-color: #48bb78;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
+
+        .upload-text {
+            font-size: 1.05rem;
+            color: #cbd5e0;
+            margin-bottom: 6px;
+        }
+
+        .upload-hint {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        #preview {
+            max-width: 100%;
+            max-height: 320px;
+            border-radius: 14px;
+            display: none;
+            margin: 0 auto;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn-stamp {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+            color: white;
+            box-shadow: 0 6px 20px rgba(237, 137, 54, 0.35);
+        }
+
+        .btn-stamp:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(237, 137, 54, 0.45);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.35);
+        }
+
+        .btn-download:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(72, 187, 120, 0.45);
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            min-height: 24px;
+            color: #68d391;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Stamp</h1>
+        <p class="subtitle">Upload → Stamp → Download</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">Click here to upload an image</div>
+            <div class="upload-hint">or drag & drop the image here</div>
+            <img id="preview" alt="Image preview">
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*">
+
+        <button class="btn btn-stamp" id="stampBtn" disabled>
+            <span>🔒</span>
+            <span>Stamp with «Read Only»</span>
+        </button>
+
+        <button class="btn btn-download hidden" id="downloadBtn">
+            <span>⬇️</span>
+            <span>Download Stamped Image</span>
+        </button>
+
+        <button class="btn btn-reset hidden" id="resetBtn">
+            New Image
+        </button>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <div class="footer">
+        Ready to use on mobile and desktop
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const stampBtn = document.getElementById('stampBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const status = document.getElementById('status');
+
+        let originalImage = null;
+        let stampedBlob = null;
+
+        // فتح نافذة اختيار الملف
+        uploadArea.addEventListener('click', () => {
+            if (!originalImage) fileInput.click();
+        });
+
+        // سحب وإفلات
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                status.textContent = 'Please select an image only';
+                status.style.color = '#fc8181';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalImage = new Image();
+                originalImage.onload = () => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    uploadArea.classList.add('has-image');
+                    uploadArea.querySelector('.upload-icon').style.display = 'none';
+                    uploadArea.querySelector('.upload-text').style.display = 'none';
+                    uploadArea.querySelector('.upload-hint').style.display = 'none';
+                    
+                    stampBtn.disabled = false;
+                    downloadBtn.classList.add('hidden');
+                    resetBtn.classList.remove('hidden');
+                    status.textContent = 'Image ready to stamp';
+                    status.style.color = '#68d391';
+                    stampedBlob = null;
+                };
+                originalImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Stamp the image - small repeating "Read Only" text covering the whole image
+        stampBtn.addEventListener('click', () => {
+            if (!originalImage) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = originalImage.naturalWidth;
+            canvas.height = originalImage.naturalHeight;
+
+            // Draw original image
+            ctx.drawImage(originalImage, 0, 0);
+
+            // Repeating stamp settings
+            const text = 'Read Only';
+            const fontSize = Math.max(18, Math.min(canvas.width, canvas.height) * 0.035);
+            const gapX = fontSize * 5.2;
+            const gapY = fontSize * 2.6;
+
+            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Draw diagonal repeating text
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(-28 * Math.PI / 180);
+
+            const coverWidth = canvas.width * 1.6;
+            const coverHeight = canvas.height * 1.6;
+
+            for (let y = -coverHeight / 2; y < coverHeight / 2; y += gapY) {
+                for (let x = -coverWidth / 2; x < coverWidth / 2; x += gapX) {
+                    // Soft shadow
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                    ctx.fillText(text, x + 1.5, y + 1.5);
+
+                    // Main text
+                    ctx.fillStyle = 'rgba(220, 40, 40, 0.58)';
+                    ctx.fillText(text, x, y);
+                }
+            }
+
+            ctx.restore();
+
+            // Convert to image
+            canvas.toBlob((blob) => {
+                stampedBlob = blob;
+                const url = URL.createObjectURL(blob);
+                preview.src = url;
+                
+                stampBtn.disabled = true;
+                downloadBtn.classList.remove('hidden');
+                status.textContent = 'Image stamped successfully ✓';
+                status.style.color = '#68d391';
+            }, 'image/jpeg', 0.92);
+        });
+
+        // Download the image
+        downloadBtn.addEventListener('click', () => {
+            if (!stampedBlob) return;
+
+            const link = document.createElement('a');
+            link.download = 'Read_Only_' + Date.now() + '.jpg';
+            link.href = URL.createObjectURL(stampedBlob);
+            link.click();
+            
+            status.textContent = 'Download started...';
+        });
+
+        // إعادة تعيين
+        resetBtn.addEventListener('click', () => {
+            originalImage = null;
+            stampedBlob = null;
+            preview.src = '';
+            preview.style.display = 'none';
+            uploadArea.classList.remove('has-image');
+            uploadArea.querySelector('.upload-icon').style.display = 'block';
+            uploadArea.querySelector('.upload-text').style.display = 'block';
+            uploadArea.querySelector('.upload-hint').style.display = 'block';
+            stampBtn.disabled = true;
+            downloadBtn.classList.add('hidden');
+            resetBtn.classList.add('hidden');
+            status.textContent = '';
+            fileInput.value = '';
+        });
+    </script>
+</body>
+</html>
